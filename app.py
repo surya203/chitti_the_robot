@@ -1,35 +1,39 @@
-#give me a simple streamlit app that can showcase the use of streamlit and the different components of streamlit
 import streamlit as st
+import os
+from dotenv import load_dotenv
+from openai import DefaultHttpxClient, OpenAI
 
-#print hello world in streamlit
-st.write("Hello World")
+load_dotenv()   
+api_key = os.getenv("OPENAI_API_VALUE")
 
-#give me a button that says click me and when clicked it will print hello world in streamlit
-button = st.button("Click me")
-if button:
-    st.write("Hello pillau maha lakka")
+#line number 13 can be removed if you are not using httpx2 2.14
+http_client = DefaultHttpxClient(headers={"Accept-Encoding": "gzip, deflate"})
+client = OpenAI(api_key=api_key, http_client=http_client)
 
-#give me a text input that says enter your name and when entered it will print hello name in streamlit
-text_input = st.text_input("Enter your name")
-if text_input:
-    st.write(f"Hello {text_input}")
+st.title("Human Resource Chatbot")
 
-#give me a text area that says enter your message and when entered it will print hello message in streamlit
-text_area = st.text_area("Enter your message")
-if text_area:
-    st.write(f"Hello {text_area}")
+# Remember the chat thread for this browser session
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-#give me a select box that says select your gender and when selected it will print hello gender in streamlit
-select_box = st.selectbox("Select your gender", ["Male", "Female", "Other"])
-if select_box:
-    st.write(f"Hello {select_box}")
+# Show the conversation so far
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
 
-#give me a radio button that says select your gender and when selected it will print hello gender in streamlit
-radio_button = st.radio("Select your gender", ["Male", "Female", "Other"])
-if radio_button:
-    st.write(f"Hello {radio_button}")
+user_input = st.chat_input("Ask me anything about human resources:")
+if user_input:
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+        st.write(user_input)
 
-#give me a checkbox that says select your gender and when selected it will print hello gender in streamlit
-checkbox = st.checkbox("Select your gender")
-if checkbox:
-    st.write(f"Hello {checkbox}")
+    response = client.responses.create(
+        model="gpt-4.1",
+        instructions="Your are a human resource assistant. You are helpful and friendly. You are always willing to help the user. if the user asks about a topic that is not related to human resources, you should say that you're here only to answer questions related to human resources. If the user asks about a topic that is not related to human resources, you should suggest the user to ask about a topic that is related to human resources.",
+        input=st.session_state.messages,
+        temperature=0.5,
+    )
+
+    st.session_state.messages.append({"role": "assistant", "content": response.output_text})
+    with st.chat_message("assistant"):
+        st.write(response.output_text)
